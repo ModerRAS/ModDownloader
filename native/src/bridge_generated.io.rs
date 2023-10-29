@@ -11,6 +11,11 @@ pub extern "C" fn wire_rust_release_mode(port_: i64) {
     wire_rust_release_mode_impl(port_)
 }
 
+#[no_mangle]
+pub extern "C" fn wire_test(port_: i64) {
+    wire_test_impl(port_)
+}
+
 // Section: allocate functions
 
 // Section: related functions

@@ -2,7 +2,6 @@
 # many dependencies we would need to install Corrosion on the system.
 # See instructions on https://github.com/AndrewGaspar/corrosion#cmake-install
 # Once done, uncomment this line:
-# find_package(Corrosion REQUIRED)
 
 include(FetchContent)
 
@@ -19,3 +18,5 @@ target_link_libraries(${BINARY_NAME} PRIVATE ${imported_crates})
 foreach(imported_crate ${imported_crates})
   list(APPEND PLUGIN_BUNDLED_LIBRARIES $<TARGET_FILE:${imported_crate}-shared>)
 endforeach()
+
+# find_package(Corrosion REQUIRED)
