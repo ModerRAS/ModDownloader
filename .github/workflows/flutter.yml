@@ -16,7 +16,7 @@ jobs:
         job:
           # - { target: i686-pc-windows-msvc        , os: windows-2019                  }
           # - { target: x86_64-pc-windows-gnu       , os: windows-2019                  }
-          - { target: x86_64-pc-windows-msvc, os: windows-2019, arch: x86_64 }
+          - { target: x86_64-pc-windows-msvc, os: windows-latest, arch: x86_64 }
           # - { target: aarch64-pc-windows-msvc, os: windows-2019, arch: aarch64 }
     steps:
       - name: Checkout source code
