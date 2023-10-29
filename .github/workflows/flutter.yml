@@ -48,7 +48,7 @@ jobs:
         run: |
           git config --global core.longpaths true
           cargo install flutter_rust_bridge_codegen
-          cargo install expand
+          cargo install cargo-expand
           flutter_rust_bridge_codegen --rust-input native/src/api.rs --dart-output lib/bridge_generated.dart
           
       - name: Build ModDownloader
