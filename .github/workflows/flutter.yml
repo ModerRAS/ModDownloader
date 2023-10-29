@@ -24,6 +24,8 @@ jobs:
 
       - name: Install LLVM and Clang
         uses: KyleMayes/install-llvm-action@v1
+        with:
+          version: 17.0.2
 
       - name: Install flutter
         uses: subosito/flutter-action@v2
