@@ -25,7 +25,9 @@ jobs:
       - name: Setup cmake
         uses: jwlawson/actions-setup-cmake@v1.13
         with:
-          cmake-version: '3.27.x'
+          cmake-version: latest
+      - name: Use cmake
+        run: cmake --version
 
       - name: Install LLVM and Clang
         uses: KyleMayes/install-llvm-action@v1
