@@ -1,11 +1,38 @@
 import 'dart:async';
 
+import 'package:ModDownloader/theme.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import 'package:system_theme/system_theme.dart';
+import 'package:window_manager/window_manager.dart';
 import 'ffi.dart' if (dart.library.html) 'ffi_web.dart';
+import 'package:fluent_ui/fluent_ui.dart' hide Page, Colors;
+import 'package:flutter_acrylic/flutter_acrylic.dart' as flutter_acrylic;
 
-void main() {
+const String appTitle = "Mod下载器";
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  SystemTheme.accentColor.load();
+  await flutter_acrylic.Window.initialize();
+  await flutter_acrylic.Window.hideWindowControls();
+  await WindowManager.instance.ensureInitialized();
+  windowManager.waitUntilReadyToShow().then((_) async {
+    await windowManager.setTitleBarStyle(
+      TitleBarStyle.hidden,
+      windowButtonVisibility: false,
+    );
+    await windowManager.setMinimumSize(const Size(500, 600));
+    await windowManager.show();
+    await windowManager.setPreventClose(true);
+    await windowManager.setSkipTaskbar(false);
+  });
+
   runApp(const MyApp());
 }
+
+final _appTheme = AppTheme();
 
 class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
@@ -13,21 +40,50 @@ class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Mod下载器',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // Try running your application with "flutter run". You'll see the
-        // application has a blue toolbar. Then, without quitting the app, try
-        // changing the primarySwatch below to Colors.green and then invoke
-        // "hot reload" (press "r" in the console where you ran "flutter run",
-        // or simply save your changes to "hot reload" in a Flutter IDE).
-        // Notice that the counter didn't reset back to zero; the application
-        // is not restarted.
-        primarySwatch: Colors.blue,
-      ),
-      home: const MyHomePage(title: 'Mod下载器'),
+    return ChangeNotifierProvider.value(
+      value: _appTheme,
+      builder: (context, child) {
+        final appTheme = context.watch<AppTheme>();
+        return FluentApp.router(
+          title: appTitle,
+          themeMode: appTheme.mode,
+          debugShowCheckedModeBanner: false,
+          color: appTheme.color,
+          darkTheme: FluentThemeData(
+            brightness: Brightness.dark,
+            accentColor: appTheme.color,
+            visualDensity: VisualDensity.standard,
+            focusTheme: FocusThemeData(
+              glowFactor: is10footScreen(context) ? 2.0 : 0.0,
+            ),
+          ),
+          theme: FluentThemeData(
+            accentColor: appTheme.color,
+            visualDensity: VisualDensity.standard,
+            focusTheme: FocusThemeData(
+              glowFactor: is10footScreen(context) ? 2.0 : 0.0,
+            ),
+          ),
+          locale: appTheme.locale,
+          builder: (context, child) {
+            return Directionality(
+              textDirection: appTheme.textDirection,
+              child: NavigationPaneTheme(
+                data: NavigationPaneThemeData(
+                  backgroundColor: appTheme.windowEffect !=
+                          flutter_acrylic.WindowEffect.disabled
+                      ? Colors.transparent
+                      : null,
+                ),
+                child: child!,
+              ),
+            );
+          },
+          routeInformationParser: router.routeInformationParser,
+          routerDelegate: router.routerDelegate,
+          routeInformationProvider: router.routeInformationProvider,
+        );
+      },
     );
   }
 }
@@ -65,6 +121,7 @@ class _MyHomePageState extends State<MyHomePage> {
   late Future<Platform> platform;
   late Future<bool> isRelease;
   late Future<String> test;
+  late int topIndex;
 
   @override
   void initState() {
@@ -72,6 +129,7 @@ class _MyHomePageState extends State<MyHomePage> {
     platform = api.platform();
     isRelease = api.rustReleaseMode();
     test = api.test();
+    topIndex = 0;
   }
 
   @override
@@ -81,64 +139,103 @@ class _MyHomePageState extends State<MyHomePage> {
     // The Flutter framework has been optimized to make rerunning build methods
     // fast, so that you can just rebuild anything that needs updating rather
     // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
+    // Do not define the `items` inside the `Widget Build` function
+// otherwise on running `setstate`, new item can not be added.
+
+    List<NavigationPaneItem> items = [
+      PaneItem(
+        icon: const Icon(FluentIcons.home),
+        title: const Text('Home'),
+        body: const Text("text"),
       ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Invoke "debug painting" (press "p" in the console, choose the
-          // "Toggle Debug Paint" action from the Flutter Inspector in Android
-          // Studio, or the "Toggle Debug Paint" command in Visual Studio Code)
-          // to see the wireframe for each widget.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text("You're running on"),
-            // To render the results of a Future, a FutureBuilder is used which
-            // turns a Future into an AsyncSnapshot, which can be used to
-            // determine if an error was encountered, data is ready or otherwise.
-            FutureBuilder<List<dynamic>>(
-              // We await for both futures in a tuple, then uwnrap their results inside the builder.
-              // Recent versions of Dart allow the type of the snapshot to be correctly inferred.
-              // Since Future.wait predates Dart 3 and does not understand tuples, we use the join method
-              // declared earlier to concurrently await two futures while preserving type safety.
-              future: Future.wait([test]),
-              builder: (context, snap) {
-                final style = Theme.of(context).textTheme.headlineMedium;
-                if (snap.error != null) {
-                  // An error has been encountered, so give an appropriate response and
-                  // pass the error details to an unobstructive tooltip.
-                  debugPrint(snap.error.toString());
-                  return Tooltip(
-                    message: snap.error.toString(),
-                    child: Text('Unknown OS', style: style),
-                  );
-                }
-
-                // Guard return here, the data is not ready yet.
-                final data = snap.data;
-                if (data == null) return const CircularProgressIndicator();
-
-                return Text('${data[0]}');
-              },
-            )
-          ],
+      PaneItemSeparator(),
+      PaneItem(
+        icon: const Icon(FluentIcons.issue_tracking),
+        title: const Text('Track orders'),
+        infoBadge: const InfoBadge(source: Text('8')),
+        body: const Text(
+          'Badging is a non-intrusive and intuitive way to display '
+          'notifications or bring focus to an area within an app - '
+          'whether that be for notifications, indicating new content, '
+          'or showing an alert. An InfoBadge is a small piece of UI '
+          'that can be added into an app and customized to display a '
+          'number, icon, or a simple dot.',
         ),
+      ),
+      PaneItem(
+        icon: const Icon(FluentIcons.disable_updates),
+        title: const Text('Disabled Item'),
+        body: const Text("text"),
+        enabled: false,
+      ),
+    ];
+
+// Return the NavigationView from `Widegt Build` function
+    return NavigationView(
+      appBar: const NavigationAppBar(
+        title: Text('NavigationView'),
+      ),
+      pane: NavigationPane(
+        selected: topIndex,
+        onChanged: (index) => setState(() => topIndex = index),
+        displayMode: PaneDisplayMode.open,
+        items: items,
+        footerItems: [
+          PaneItem(
+            icon: const Icon(FluentIcons.settings),
+            title: const Text('Settings'),
+            body: const Text("text"),
+          ),
+          PaneItemAction(
+            icon: const Icon(FluentIcons.add),
+            title: const Text('Add New Item'),
+            onTap: () {
+              // Your Logic to Add New `NavigationPaneItem`
+              items.add(
+                PaneItem(
+                  icon: const Icon(FluentIcons.new_folder),
+                  title: const Text('New Item'),
+                  body: const Center(
+                    child: Text(
+                      'This is a newly added Item',
+                    ),
+                  ),
+                ),
+              );
+              setState(() {});
+            },
+          ),
+        ],
       ),
     );
   }
 }
+
+final rootNavigatorKey = GlobalKey<NavigatorState>();
+final _shellNavigatorKey = GlobalKey<NavigatorState>();
+final router = GoRouter(navigatorKey: rootNavigatorKey, routes: [
+  ShellRoute(
+    navigatorKey: _shellNavigatorKey,
+    builder: (context, state, child) {
+      return MyHomePage(
+        // shellContext: _shellNavigatorKey.currentContext,
+        title: '',
+        // child: child,
+      );
+    },
+    routes: [
+      /// Home
+      GoRoute(path: '/', builder: (context, state) => const Text("a")),
+
+      /// Settings
+      GoRoute(path: '/settings', builder: (context, state) => const Text("b")),
+
+      /// /// Input
+      /// Buttons
+      GoRoute(
+        path: '/inputs/buttons',
+        builder: (context, state) => const Text("data"),
+      )
+    ],
+  ),
+]);
